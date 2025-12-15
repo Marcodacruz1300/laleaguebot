@@ -5,7 +5,7 @@ exports.handler = async (event) => {
 
     const BOT_TOKEN =
       process.env.TELEGRAM_BOT_TOKEN ||
-      "8588164264:AAGyHjcQPtxOQt_OiAzniNfhMcjAj8CqJwQ";
+      "8590933654:AAFLi_NUJlMA5tOKHPrgUF6eP-ztrT1Gvgw";
 
     const update = JSON.parse(event.body || "{}");
 

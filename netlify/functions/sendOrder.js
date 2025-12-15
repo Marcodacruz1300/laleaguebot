@@ -4,7 +4,7 @@ exports.handler = async (event) => {
 
     const BOT_TOKEN =
       process.env.TELEGRAM_BOT_TOKEN ||
-      "8588164264:AAGyHjcQPtxOQt_OiAzniNfhMcjAj8CqJwQ"; // TODO: passe en variable d'env plus tard
+      "8590933654:AAFLi_NUJlMA5tOKHPrgUF6eP-ztrT1Gvgw"; // TODO: passe en variable d'env plus tard
 
     // Liste des destinataires admin
     const ADMIN_CHAT_IDS = [
