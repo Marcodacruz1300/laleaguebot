@@ -3,12 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Menu</title>
+  <title>Menu LaLeagueBot</title>
   <meta name="theme-color" content="#0b0d10" />
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    /* Bouton orange au-dessus du fond */
     .fab { z-index: 25; }
   </style>
 </head>
@@ -20,7 +19,7 @@
   <!-- Header -->
   <header class="header">
     <img class="hero-logo" src="assets/logo.png" alt="logo" />
-    <h1 class="hero-title">Menu</h1>
+    <h1 class="hero-title">Menu LaLeagueBot</h1>
   </header>
 
   <!-- Filtres -->
@@ -75,6 +74,7 @@
     const cart = [];
 
     async function loadProducts() {
+      // ⚡ Ici, la fonction Netlify lit ton repo laleaguebot
       const res = await fetch("/.netlify/functions/listProducts");
       const data = await res.json();
       if (!data.ok) return;
@@ -125,7 +125,7 @@
       document.getElementById("sheet").classList.remove("open");
     });
 
-    // Envoi commande via sendOrder.js (sécurité retirée)
+    // Envoi commande via sendOrder.js du repo laleaguebot
     document.getElementById("sendOrder").addEventListener("click", async () => {
       const tg = window.Telegram.WebApp;
       const customerId = tg.initDataUnsafe?.user?.id || null;
@@ -135,7 +135,6 @@
       const address = document.getElementById("address").value.trim();
       const note = document.getElementById("note").value.trim();
 
-      // ⚡ On envoie même si certains champs sont vides
       const payload = {
         customer: { name, phone, address, note },
         items: cart.map(it => ({ title: it.title, qty: 1, price: it.price })),

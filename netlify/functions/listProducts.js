@@ -1,7 +1,8 @@
+// netlify/functions/listProducts.js
 const { Octokit } = require("@octokit/rest");
 
 const OWNER = "Marcodacruz1300";
-const REPO = "stonr";
+const REPO = "laleaguebot";   // ⚡ nouveau repo
 const BRANCH = "main";
 const PRODUCTS_JSON = "products.json";
 
@@ -9,7 +10,6 @@ exports.handler = async () => {
   try {
     const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-    // Récupérer le contenu du fichier products.json
     const { data: jsonFile } = await octokit.repos.getContent({
       owner: OWNER,
       repo: REPO,
@@ -27,7 +27,7 @@ exports.handler = async () => {
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ ok: false, error: { name: err.name || "Error", message: err.message } })
+      body: JSON.stringify({ ok: false, error: { name: err.name, message: err.message } })
     };
   }
 };

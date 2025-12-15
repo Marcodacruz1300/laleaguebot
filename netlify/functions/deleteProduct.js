@@ -1,7 +1,7 @@
 const { Octokit } = require("@octokit/rest");
 
-const OWNER = "Marcodacruz1300";
-const REPO = "stonr";
+const OWNER = "Marcodacruz1300";   // ton compte GitHub
+const REPO = "laleaguebot";        // ⚡ nouveau repo
 const BRANCH = "main";
 const PRODUCTS_DIR = "content/produits";
 const PRODUCTS_JSON = "products.json";
@@ -21,7 +21,7 @@ exports.handler = async (event) => {
     const filePath = `${PRODUCTS_DIR}/${slug}.md`;
     const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-    // --- 1) Récupérer le sha du fichier produit ---
+    // 1) Récupérer le sha du fichier produit
     const { data: file } = await octokit.repos.getContent({
       owner: OWNER,
       repo: REPO,
@@ -30,7 +30,7 @@ exports.handler = async (event) => {
     });
     const sha = file.sha;
 
-    // --- 2) Supprimer le fichier produit ---
+    // 2) Supprimer le fichier produit
     await octokit.repos.deleteFile({
       owner: OWNER,
       repo: REPO,
@@ -40,7 +40,7 @@ exports.handler = async (event) => {
       sha
     });
 
-    // --- 3) Mettre à jour products.json ---
+    // 3) Mettre à jour products.json
     let productsSha = null;
     let products = [];
     try {
@@ -62,7 +62,6 @@ exports.handler = async (event) => {
     let imagePathToDelete = null;
     products = products.filter(p => {
       if (p.slug === slug && p.image) {
-        // l'image est stockée comme "/content/images/xxx.png"
         imagePathToDelete = p.image.startsWith("/") ? p.image.slice(1) : p.image;
       }
       return p.slug !== slug;
@@ -80,7 +79,7 @@ exports.handler = async (event) => {
       sha: productsSha || undefined
     });
 
-    // --- 4) Supprimer l'image associée si elle existe ---
+    // 4) Supprimer l'image associée si elle existe
     if (imagePathToDelete) {
       try {
         const { data: imgFile } = await octokit.repos.getContent({
@@ -98,7 +97,7 @@ exports.handler = async (event) => {
           sha: imgFile.sha
         });
       } catch (err) {
-        // si l'image n'existe pas ou déjà supprimée, on ignore
+        // ignore si déjà supprimée
       }
     }
 
