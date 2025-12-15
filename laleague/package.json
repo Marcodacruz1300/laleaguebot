@@ -1,0 +1,14 @@
+{
+  "name": "stonr",
+  "version": "1.0.0",
+  "description": "Site avec backoffice Netlify",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'Build statique'",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.0.0",
+    "gray-matter": "^4.0.3"
+  }
+}

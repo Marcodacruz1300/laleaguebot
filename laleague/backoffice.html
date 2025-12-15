@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Backoffice CMS</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    .row { margin-bottom: 12px; }
+    input, textarea, button { padding: 8px; }
+    .danger { background: #fef2f2; border: 1px solid #fecaca; }
+    .success { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .warn { background: #fffbeb; border: 1px solid #fde68a; }
+    .list-item { display: flex; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid #eee; }
+    .actions button { margin-left: 8px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Backoffice — Produits</h1>
+
+  <!-- Déverrouillage par code local -->
+  <div class="card warn" id="auth">
+    <div class="row"><strong>Déverrouillage requis</strong></div>
+    <div class="row" style="display:flex;gap:8px;">
+      <input type="password" id="unlockCode" placeholder="Code (BOT2026)">
+      <button id="unlockBtn" type="button">Déverrouiller</button>
+    </div>
+    <div id="authMsg"></div>
+  </div>
+
+  <div class="grid">
+    <!-- Catalogue -->
+    <div class="card">
+      <h2>Catalogue</h2>
+      <div id="list"></div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="card">
+      <h2 id="formTitle">Créer / Modifier un produit</h2>
+      <div class="row"><input type="text" id="title" placeholder="Titre"></div>
+      <div class="row"><input type="number" id="price" placeholder="Prix"></div>
+      <div class="row"><textarea id="description" placeholder="Description" rows="4"></textarea></div>
+      <div class="row"><input type="file" id="image" accept="image/*"></div>
+      <div class="row" id="currentImageRow"></div>
+      <div class="row">
+        <button id="saveBtn" type="button">Enregistrer</button>
+        <button id="resetBtn" type="button">Réinitialiser</button>
+        <button id="deleteBtn" class="danger" type="button">Supprimer</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    let editingSlug = null;
+    let currentImageUrl = "";
+
+    const get = (id) => document.getElementById(id);
+    const showStatus = (type, text) => {
+      const el = get("status");
+      if (!el) return;
+      el.className = type === "error" ? "card danger" : (type === "success" ? "card success" : "card warn");
+      el.textContent = text;
+    };
+    const showAuthMsg = (type, text) => {
+      const el = get("authMsg");
+      if (!el) return;
+      el.className = type === "error" ? "danger" : "success";
+      el.textContent = text;
+    };
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(",")[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+    const parseResponse = async (res, context) => {
+      const raw = await res.text();
+      let data;
+      try { data = JSON.parse(raw); }
+      catch { showStatus("error", `Réponse invalide (${context}): ${raw}`); return null; }
+      return data;
+    };
+
+    // Déverrouiller avec BOT2026
+    get("unlockBtn").addEventListener("click", async () => {
+      const code = (get("unlockCode").value || "").trim();
+      if (code !== "BOT2026") {
+        showAuthMsg("error", "Code incorrect. Essaie BOT2026.");
+        return;
+      }
+      showAuthMsg("success", "Backoffice déverrouillé.");
+      get("auth").classList.add("hidden");
+      await loadList();
+    });
+
+    // Charger la liste
+    const loadList = async () => {
+      const listEl = get("list");
+      listEl.innerHTML = "Chargement…";
+      try {
+        const res = await fetch("/.netlify/functions/listProducts");
+        const data = await parseResponse(res, "list");
+        if (!data) return;
+        if (!data.ok) throw new Error(`${data.error.name}: ${data.error.message}`);
+        const items = data.products || [];
+        listEl.innerHTML = items.length
+          ? items.map(p => `
+              <div class="list-item">
+                <div>
+                  <strong>${p.title}</strong> — ${p.price}€
+                </div>
+                <div class="actions">
+                  <button data-slug="${p.slug}" class="editBtn" type="button">Modifier</button>
+                </div>
+              </div>
+            `).join("")
+          : "Aucun produit pour le moment.";
+        document.querySelectorAll(".editBtn").forEach(b => b.addEventListener("click", () => editProduct(b.dataset.slug)));
+      } catch (err) {
+        listEl.innerHTML = "Erreur de chargement";
+        showStatus("error", `Liste — ${err.message}`);
+      }
+    };
+
+    // Editer un produit
+    const editProduct = async (slug) => {
+      try {
+        const res = await fetch(`/.netlify/functions/getProduct?slug=${encodeURIComponent(slug)}`);
+        const data = await parseResponse(res, "get");
+        if (!data) return;
+        if (!data.ok) throw new Error(`${data.error.name}: ${data.error.message}`);
+        const p = data.product || {};
+        editingSlug = p.slug || slug;
+        get("formTitle").textContent = `Modifier: ${p.title || slug}`;
+        get("title").value = p.title || "";
+        get("price").value = p.price ?? "";
+        get("description").value = p.description || "";
+        currentImageUrl = p.image || "";
+        get("currentImageRow").innerHTML = currentImageUrl ? `<div>Image actuelle: <img src="${currentImageUrl}" width="120"></div>` : "";
+        showStatus("warn", "Produit chargé — tu peux éditer et enregistrer.");
+      } catch (err) {
+        showStatus("error", `Chargement — ${err.message}`);
+      }
+    };
+
+    // Réinitialiser
+    const resetForm = () => {
+      editingSlug = null;
+      currentImageUrl = "";
+      get("formTitle").textContent = "Créer / Modifier un produit";
+      get("title").value = "";
+      get("price").value = "";
+      get("description").value = "";
+      const imgInput = get("image"); if (imgInput) imgInput.value = "";
+      get("currentImageRow").innerHTML = "";
+      showStatus("warn", "Formulaire réinitialisé.");
+    };
+
+    // Sauvegarder
+    const saveProduct = async () => {
+      try {
+        const title = (get("title").value || "").trim();
+        const price = (get("price").value || "").trim();
+        const description = (get("description").value || "").trim();
+        if (!title || !price || !description) {
+          showStatus("error", "ValidationError: title, price et description sont requis");
+          return;
+        }
+
+        const fileEl = get("image");
+        const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+        let imageBase64 = null, imageName = null;
+        if (file) {
+          imageBase64 = await toBase64(file);
+          imageName = file.name;
+        }
+
+        const payload = {
+          title,
+          price,
+          description,
+          published: true,
+          imageBase64,
+          imageName,
+          originalSlug: editingSlug || null,
+          image: currentImageUrl
+        };
+
+        const res = await fetch("/.netlify/functions/saveProduct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await parseResponse(res, "save");
+        if (!data) return;
+        if (!data.ok) {
+          showStatus("error", `${data.error.name}: ${data.error.message}`);
+          return;
+        }
+        showStatus("success", data.message);
+        await loadList();
+        if (data.slug) {
+          await editProduct(data.slug);
+        }
+      } catch (err) {
+        showStatus("error", `SaveError: ${err.message}`);
+      }
+      }
+
+    // Supprimer
+    const deleteProduct = async () => {
+      if (!editingSlug) {
+        showStatus("error", "ValidationError: aucun produit sélectionné");
+        return;
+      }
+      if (!confirm(`Supprimer définitivement: ${editingSlug} ?`)) return;
+      try {
+        const res = await fetch("/.netlify/functions/deleteProduct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: editingSlug })
+        });
+        const data = await parseResponse(res, "delete");
+        if (!data) return;
+        if (!data.ok) {
+          showStatus("error", `${data.error.name}: ${data.error.message}`);
+          return;
+        }
+        showStatus("success", data.message);
+        resetForm();
+        loadList();
+      } catch (err) {
+        showStatus("error", `DeleteError: ${err.message}`);
+      }
+    };
+
+    // Bind des boutons
+    get("saveBtn").addEventListener("click", saveProduct);
+    get("resetBtn").addEventListener("click", resetForm);
+    get("deleteBtn").addEventListener("click", deleteProduct);
+  </script>
+</body>
+</html>
